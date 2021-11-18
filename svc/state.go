@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,23 +12,21 @@ import (
 	"go.etcd.io/etcd/clientv3"
 )
 
-const (
-	EtcdPathOrder = "/service/order"
-)
-
 type State struct {
-	EtcdClient *clientv3.Client
-	Cache      map[string]bool
-	CacheMutex *sync.RWMutex
-	Flush      map[string]bool
-	FlushMutex *sync.Mutex
-	NoOp       bool // If set, State won't do anything
+	ServiceName string
+	EtcdClient  *clientv3.Client
+	Cache       map[string]bool
+	CacheMutex  *sync.RWMutex
+	Flush       map[string]bool
+	FlushMutex  *sync.Mutex
+	NoOp        bool // If set, State won't do anything
 }
 
-func NewState() (*State, error) {
+func NewState(serviceName string) (*State, error) {
 	if os.Getenv("ENABLE_STATE") == "" {
 		return &State{
-			NoOp: true,
+			ServiceName: serviceName,
+			NoOp:        true,
 		}, nil
 	}
 
@@ -41,15 +40,16 @@ func NewState() (*State, error) {
 	}
 
 	s := &State{
-		EtcdClient: client,
-		Cache:      make(map[string]bool),
-		CacheMutex: &sync.RWMutex{},
-		Flush:      make(map[string]bool),
-		FlushMutex: &sync.Mutex{},
+		ServiceName: serviceName,
+		EtcdClient:  client,
+		Cache:       make(map[string]bool),
+		CacheMutex:  &sync.RWMutex{},
+		Flush:       make(map[string]bool),
+		FlushMutex:  &sync.Mutex{},
 	}
 
 	// Perform initial import
-	if err := s.importCache(EtcdPathOrder + "/"); err != nil {
+	if err := s.importCache(s.etcdPath()); err != nil {
 		return nil, errors.Wrap(err, "unable to perform initial import")
 	}
 
@@ -102,7 +102,11 @@ func (s *State) importCache(keyspace string) error {
 	defer s.CacheMutex.Unlock()
 
 	for _, v := range resp.Kvs {
-		log.Infof("got a key: %s", string(v.Key))
+		messageID := strings.TrimPrefix(string(v.Key), s.etcdPath())
+
+		log.Infof("caching message id '%s'", messageID)
+
+		s.Cache[messageID] = true
 	}
 
 	return nil
@@ -123,11 +127,14 @@ func (s *State) startFlusher() {
 			<-ticker.C
 			// Save cache contents to etcd
 			s.FlushMutex.Lock()
-			for k, _ := range s.Flush {
-				if _, err := s.EtcdClient.Put(context.TODO(), EtcdPathOrder+"/"+k, "true"); err != nil {
+			for k := range s.Flush {
+				if _, err := s.EtcdClient.Put(context.TODO(), s.etcdPath()+k, "true"); err != nil {
 					log.Errorf("unable to flush key '%s' to etcd: %s", k, err)
 					continue
 				}
+
+				// Remove the entry from the flush "queue"
+				delete(s.Flush, k)
 
 				numFlushed += 1
 			}
@@ -138,4 +145,8 @@ func (s *State) startFlusher() {
 			}
 		}
 	}()
+}
+
+func (s *State) etcdPath() string {
+	return "/service/" + s.ServiceName + "/"
 }

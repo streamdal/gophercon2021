@@ -15,9 +15,12 @@ const (
 type MessageType string
 
 type Consumer struct {
-	Deps *Dependencies
+	ServiceName string
+	Deps        *Dependencies
 }
 
+// Event describes what a valid event looks like. Normally, this should be shared
+// between services, best in the form of compiled protos that are vendored.
 type Event struct {
 	ID   string
 	Type MessageType
@@ -62,13 +65,18 @@ func (c *Consumer) processOrder(msg *Event) error {
 	if c.Deps.State.Contains(msg.ID) {
 		log.Infof("message id '%s' is a dupe - skipping", msg.ID)
 
-		c.Deps.StatsDClient.Count("order_processed_dupe", 1, nil, 1)
+		if err := c.Deps.StatsDClient.Incr(c.ServiceName+"_new_order_skipped", nil, 1); err != nil {
+			log.Errorf("unable to increase count: %s", err)
+		}
+
 		return nil
 	}
 
-	c.Deps.StatsDClient.Count("order_processed", 1, nil, 1)
+	if err := c.Deps.StatsDClient.Incr(c.ServiceName+"_new_order_ok", nil, 1); err != nil {
+		log.Errorf("unable to increase count: %s", err)
+	}
 
-	log.Infof("successfully processed message with id '%s'", msg.ID)
+	log.Infof("successfully processed 'new_order' message with id '%s'", msg.ID)
 
 	// Update state
 	c.Deps.State.Add(msg.ID)
@@ -77,7 +85,11 @@ func (c *Consumer) processOrder(msg *Event) error {
 }
 
 func (c *Consumer) banUser(msg *Event) error {
-	c.Deps.StatsDClient.Count("user_banned", 1, nil, 1)
+	log.Info("Processing ban_user message")
+
+	if err := c.Deps.StatsDClient.Incr(c.ServiceName+"_ban_user_ok", nil, 1); err != nil {
+		log.Errorf("unable to increase count: %s", err)
+	}
 
 	return nil
 }

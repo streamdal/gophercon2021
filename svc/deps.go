@@ -14,13 +14,13 @@ type Dependencies struct {
 	State        *State
 }
 
-func setupDependencies() (*Dependencies, error) {
+func setupDependencies(serviceName string) (*Dependencies, error) {
 	deps := &Dependencies{}
 
 	// Setup event bus
 	eventBus, err := rabbit.New(&rabbit.Options{
 		URLs:         []string{"amqp://localhost"},
-		QueueName:    "my-queue",
+		QueueName:    serviceName + "-queue",
 		QueueDeclare: true,
 		QueueDurable: true,
 		AutoAck:      true,
@@ -47,8 +47,12 @@ func setupDependencies() (*Dependencies, error) {
 
 	deps.StatsDClient = statsdClient
 
+	// Let's populate statsd with dummy metrics (so we can reference the metrics in graphs)
+	deps.StatsDClient.Count(serviceName+"_new_order_ok", 0, nil, 1)
+	deps.StatsDClient.Count(serviceName+"_new_order_skipped", 0, nil, 1)
+
 	// Setup state keeping
-	state, err := NewState()
+	state, err := NewState(serviceName)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to setup state")
 	}

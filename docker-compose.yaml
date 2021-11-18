@@ -21,6 +21,7 @@ services:
       - ./backend-data/etcd:/bitnami
     container_name: etcd
 
+  # Custom configs make statsd flush every 1s (instead of 10s)
   graphite-statsd:
     image: graphiteapp/graphite-statsd
     ports:
@@ -30,3 +31,6 @@ services:
       - "8125:8125/udp"
       - "8126:8126"
     container_name: graphite-statsd
+    volumes:
+      - ${PWD}/assets/udp.js:/opt/statsd/config/udp.js
+      - ${PWD}/assets/storage-schemas.conf:/opt/graphite/conf/storage-schemas.conf

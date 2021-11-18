@@ -1,4 +1,4 @@
-module github.com/batchcorp/gophercon2021/notify
+module github.com/batchcorp/gophercon2021/svc
 
 go 1.16
 
