@@ -14,6 +14,22 @@ Contents:
   * or 
   * `docker-compose up -d $specific-dependency`
 
+Once docker-compose is finished, you should be able to view the graphite UI by pointing
+your browser to http://localhost:80.
+
+The `order` and `notify` services will emit the following metrics:
+
+* `orders_processed`
+  * Emitted by `order` service when a valid order event is processed
+* `orders_processed_skipped`
+  * Emitted by `order` service when an already seen event is skipped
+* `notifications_processed`
+  * Emitted by `notify` service when a valid order event is processed
+* `notifications_processed_skipped`
+  * Emitted by `notify` service when an already seen event is skipped
+
+These metrics can be found under the path: <TODO: fill out path>
+
 ## Demo
 
 ### 1. Basic consume/produce
