@@ -6,8 +6,8 @@ presentation.
 
 Contents:
 
-* `./order` - bare-bones "sample" service
-* `./notification` - sample "notification" service
+* `./order` - idempotent sample order processing service
+* `./notify` - idempotent sample notification service
 * `./example1` - bare-bones sample producer & consumer
 * `./docker-compose.yaml` - rabbitmq, etcd and statsd + graphite (for example visualization)
   * `docker-compose.yaml up -d` - to bring up all
@@ -32,7 +32,7 @@ curl -i -u guest:guest -H "content-type:application/json" \
 ```
 5. Observe services consume the event
    1. `orders_processed` metric will increase in Graphite UI (http://localhost:80)
-   2. "notifications_sent" metric will increase
+   2. `notifications_sent` metric will increase
 
 ### 2. Recovery - one of the consumers is down (for a while)
 
@@ -43,7 +43,7 @@ curl -i -u guest:guest -H "content-type:application/json" \
    2. `notifications_sent` metric will _not_ increase
 4. Bring up "notify" service
 5. See it consume the event
-   1. "notifications_sent" metric will increase
+   1. `notifications_sent` metric will increase
 
 ### 3. Idempotency
 
