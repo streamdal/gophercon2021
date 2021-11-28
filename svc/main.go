@@ -17,7 +17,7 @@ func main() {
 
 	log.Info("setting up dependencies")
 
-	// Setup event bus
+	// Setup dependencies
 	deps, err := setupDependencies(serviceName)
 	if err != nil {
 		log.Fatalf("unable to setup deps: %s", err)
