@@ -39,7 +39,7 @@ These metrics can be found under the path: `Metrics/stats_counts/$service_new_or
    1. `cd svc && SERVICE_NAME=order go run *.go`
    2. In another terminal: `cd svc && SERVICE_NAME=notify go run *.go`
 4. Publish an event 
-   1. `plumber write rabbit --exchange events --input-data '{"type":"new_order","id":"123"}' --routing-key=foo`
+   1. `plumber write rabbit --exchange-name events --input '{"type":"new_order","id":"123"}' --routing-key=foo`
 5. Observe services consume the event
    1. `orders_new_order_ok` metric will increase in Graphite UI (http://localhost:80)
    2. `notify_new_order_ok` metric will increase
